@@ -7,19 +7,22 @@ module.exports.getUsers = (req, res) => {
 };
 
 module.exports.getUserById = (req, res) => {
-  if (req.params.userId.length === 24) {
-    User.findById(req.params.userId)
-      .then((user) => {
-        if (!user) {
-          res.status(404).send({ message: 'Пользователь не найден' });
-          return;
-        }
-        res.send(user);
-      })
-      .catch(() => res.status(404).send({ message: 'Пользователь не найден' }));
-  } else {
-    res.status(400).send({ message: 'Некорректный _id' });
-  }
+  User.findById(req.params.userId)
+    .orFail(new Error('NotValidId'))
+    .then((user) => {
+      res.send(user);
+    })
+    .catch((err) => {
+      if (err.message === 'NotValidId') {
+        res.status(404).send({ message: 'Пользователь не найден в базе данных' });
+        return;
+      }
+      if (err.name === 'CastError') {
+        res.status(400).send({ message: 'Передан не валидный ID' });
+        return;
+      }
+      res.status(500).send({ message: 'Ошибка сервера' });
+    });
 };
 
 module.exports.addUser = (req, res) => {
@@ -38,14 +41,19 @@ module.exports.addUser = (req, res) => {
 module.exports.editUserData = (req, res) => {
   const { name, about } = req.body;
   if (req.user._id) {
-    User.findByIdAndUpdate(req.user._id, { name, about }, { new: 'true' })
+    User.findByIdAndUpdate(req.user._id, { name, about }, { new: true, runValidators: true })
+      .orFail(new Error('NotValidId'))
       .then((user) => res.send(user))
       .catch((err) => {
-        if (err.name === 'ValidationError') {
-          res.status(400).send({ message: err.message });
-        } else {
-          res.status(404).send({ message: 'Пользователь по _id не найден' });
+        if (err.message === 'NotValidId') {
+          res.status(404).send({ message: 'Пользователь не найден в базе данных' });
+          return;
         }
+        if (err.name === 'CastError') {
+          res.status(400).send({ message: 'Передан не валидный ID' });
+          return;
+        }
+        res.status(500).send({ message: 'Ошибка сервера' });
       });
   } else {
     res.status(500).send({ message: 'Ошибка сервера' });
@@ -54,14 +62,21 @@ module.exports.editUserData = (req, res) => {
 
 module.exports.editUserAvatar = (req, res) => {
   if (req.user._id) {
-    User.findByIdAndUpdate(req.user._id, { avatar: req.body.avatar }, { new: 'true' })
+    /* eslint-disable */
+    User.findByIdAndUpdate(req.user._id, { avatar: req.body.avatar }, { new: true, runValidators: true })
+    /* eslint-enable */
+      .orFail(new Error('NotValidId'))
       .then((user) => res.send(user))
       .catch((err) => {
-        if (err.name === 'ValidationError') {
-          res.status(400).send({ message: err.message });
-        } else {
-          res.status(404).send({ message: 'Пользователь по _id не найден' });
+        if (err.message === 'NotValidId') {
+          res.status(404).send({ message: 'Пользователь не найден в базе данных' });
+          return;
         }
+        if (err.name === 'CastError') {
+          res.status(400).send({ message: 'Передан не валидный ID' });
+          return;
+        }
+        res.status(500).send({ message: 'Ошибка сервера' });
       });
   } else {
     res.status(500).send({ message: 'Ошибка сервера' });
