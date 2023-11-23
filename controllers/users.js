@@ -1,84 +1,79 @@
+const { HTTP_STATUS_OK, HTTP_STATUS_CREATED } = require('http2').constants;
+const mongoose = require('mongoose');
+// const bcrypt = require('bcryptjs');
 const User = require('../models/user');
+const BadRequestError = require('../errors/BadRequestError');
+const NotFoundError = require('../errors/NotFoundError');
 
-module.exports.getUsers = (req, res) => {
+module.exports.getUsers = (req, res, next) => {
   User.find({})
-    .then((users) => res.send(users))
-    .catch(() => res.status(500).send({ message: 'Ошибка сервера' }));
+    .then((users) => res.status(HTTP_STATUS_OK).send(users))
+    .catch(next);
 };
 
-module.exports.getUserById = (req, res) => {
+module.exports.getUserById = (req, res, next) => {
   User.findById(req.params.userId)
-    .orFail(new Error('NotValidId'))
+    .orFail()
     .then((user) => {
-      res.send(user);
+      res.status(HTTP_STATUS_OK).send(user);
     })
     .catch((err) => {
-      if (err.message === 'NotValidId') {
-        res.status(404).send({ message: 'Пользователь не найден в базе данных' });
-        return;
+      if (err instanceof mongoose.Error.CastError) {
+        next(new BadRequestError('Передан не валидный ID'));
+      } else if (err instanceof mongoose.Error.DocumentNotFoundError) {
+        next(new NotFoundError('Пользователь не найден в базе данных'));
+      } else {
+        next(err);
       }
-      if (err.name === 'CastError') {
-        res.status(400).send({ message: 'Передан не валидный ID' });
-        return;
-      }
-      res.status(500).send({ message: 'Ошибка сервера' });
     });
 };
 
-module.exports.addUser = (req, res) => {
+module.exports.addUser = (req, res, next) => {
   const { name, about, avatar } = req.body;
   User.create({ name, about, avatar })
-    .then((user) => res.status(201).send(user))
+    .then((user) => res.status(HTTP_STATUS_CREATED).send(user))
     .catch((err) => {
-      if (err.name === 'ValidationError') {
-        res.status(400).send({ message: err.message });
+      if (err instanceof mongoose.Error.ValidationError) {
+        next(new BadRequestError(err.message));
       } else {
-        res.status(500).send({ message: 'Ошибка сервера' });
+        next(err);
       }
     });
 };
 
-module.exports.editUserData = (req, res) => {
+module.exports.editUserData = (req, res, next) => {
   const { name, about } = req.body;
-  if (req.user._id) {
-    User.findByIdAndUpdate(req.user._id, { name, about }, { new: true, runValidators: true })
-      .orFail(new Error('NotValidId'))
-      .then((user) => res.send(user))
-      .catch((err) => {
-        if (err.message === 'NotValidId') {
-          res.status(404).send({ message: 'Пользователь не найден в базе данных' });
-          return;
-        }
-        if (err.name === 'CastError') {
-          res.status(400).send({ message: 'Передан не валидный ID' });
-          return;
-        }
-        res.status(500).send({ message: 'Ошибка сервера' });
-      });
-  } else {
-    res.status(500).send({ message: 'Ошибка сервера' });
-  }
+  User.findByIdAndUpdate(req.user._id, { name, about }, { new: true, runValidators: true })
+    .orFail()
+    .then((user) => res.status(HTTP_STATUS_OK).send(user))
+    .catch((err) => {
+      if (err instanceof mongoose.Error.ValidationError) {
+        next(new BadRequestError(err.message));
+      } else if (err instanceof mongoose.Error.DocumentNotFoundError) {
+        next(new NotFoundError('Пользователь не найден в базе данных'));
+      } else if (err instanceof mongoose.Error.CastError) {
+        next(new BadRequestError('Передан не валидный ID'));
+      } else {
+        next(err);
+      }
+    });
 };
 
-module.exports.editUserAvatar = (req, res) => {
-  if (req.user._id) {
-    /* eslint-disable */
-    User.findByIdAndUpdate(req.user._id, { avatar: req.body.avatar }, { new: true, runValidators: true })
-    /* eslint-enable */
-      .orFail(new Error('NotValidId'))
-      .then((user) => res.send(user))
-      .catch((err) => {
-        if (err.message === 'NotValidId') {
-          res.status(404).send({ message: 'Пользователь не найден в базе данных' });
-          return;
-        }
-        if (err.name === 'CastError') {
-          res.status(400).send({ message: 'Передан не валидный ID' });
-          return;
-        }
-        res.status(500).send({ message: 'Ошибка сервера' });
-      });
-  } else {
-    res.status(500).send({ message: 'Ошибка сервера' });
-  }
+module.exports.editUserAvatar = (req, res, next) => {
+  /* eslint-disable */
+  User.findByIdAndUpdate(req.user._id, { avatar: req.body.avatar }, { new: true, runValidators: true })
+  /* eslint-enable */
+    .orFail()
+    .then((user) => res.send(user))
+    .catch((err) => {
+      if (err instanceof mongoose.Error.ValidationError) {
+        next(new BadRequestError(err.message));
+      } else if (err instanceof mongoose.Error.DocumentNotFoundError) {
+        next(new NotFoundError('Пользователь не найден в базе данных'));
+      } else if (err instanceof mongoose.Error.CastError) {
+        next(new BadRequestError('Передан не валидный ID'));
+      } else {
+        next(err);
+      }
+    });
 };

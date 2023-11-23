@@ -17,7 +17,7 @@ mongoose.connect(DB_URL, {
 
 app.use((req, res, next) => {
   req.user = {
-    _id: '65468c737bed4d51850848ed',
+    _id: '65468c8d7bed4d51850848ef',
   };
 
   next();
@@ -25,5 +25,15 @@ app.use((req, res, next) => {
 
 app.use('/users', require('./routes/users'));
 app.use('/cards', require('./routes/cards'));
+
+app.use((err, req, res, next) => {
+  const { statusCode = 500, message } = err;
+  res.status(statusCode).send({
+    message: statusCode === 500
+      ? 'Ошибка сервера'
+      : message,
+  });
+  next();
+});
 
 app.listen(PORT);
