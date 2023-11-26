@@ -80,8 +80,6 @@ module.exports.editUserData = (req, res, next) => {
         next(new IncorrectRequestError(err.message));
       } else if (err instanceof mongoose.Error.DocumentNotFoundError) {
         next(new NotFoundError('Пользователь не найден в базе данных'));
-      } else if (err instanceof mongoose.Error.CastError) {
-        next(new IncorrectRequestError('Передан не валидный ID'));
       } else {
         next(err);
       }
@@ -99,8 +97,6 @@ module.exports.editUserAvatar = (req, res, next) => {
         next(new IncorrectRequestError(err.message));
       } else if (err instanceof mongoose.Error.DocumentNotFoundError) {
         next(new NotFoundError('Пользователь не найден в базе данных'));
-      } else if (err instanceof mongoose.Error.CastError) {
-        next(new IncorrectRequestError('Передан не валидный ID'));
       } else {
         next(err);
       }

@@ -18,10 +18,6 @@ mongoose.connect(DB_URL, {
 
 app.use('/', require('./routes/index'));
 
-app.use('*', (req, res) => {
-  res.status(404).send({ message: 'Страница не найдена' });
-});
-
 app.use(errors());
 
 app.use((err, req, res, next) => {

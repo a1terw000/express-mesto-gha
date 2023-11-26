@@ -9,5 +9,8 @@ router.use('/cards', auth, cardsRouter);
 router.use('/users', auth, usersRouter);
 router.use('/signin', signinRouter);
 router.use('/signup', signupRouter);
+router.use('*', (req, res) => {
+  res.status(404).send({ message: 'Страница не найдена' });
+});
 
 module.exports = router;
