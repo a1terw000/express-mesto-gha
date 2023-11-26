@@ -2,6 +2,7 @@ const express = require('express');
 const bodyParser = require('body-parser');
 const mongoose = require('mongoose');
 const helmet = require('helmet');
+const { errors } = require('celebrate');
 
 const { PORT = 3000, DB_URL = 'mongodb://127.0.0.1:27017/mestodb' } = process.env;
 
@@ -15,16 +16,13 @@ mongoose.connect(DB_URL, {
   //
 });
 
-app.use((req, res, next) => {
-  req.user = {
-    _id: '65468c8d7bed4d51850848ef',
-  };
+app.use('/', require('./routes/index'));
 
-  next();
-});
+// app.use('*', (req, res) => {
+//   res.status(404).send({ message: 'Страница не найдена' });
+// });
 
-app.use('/users', require('./routes/users'));
-app.use('/cards', require('./routes/cards'));
+app.use(errors());
 
 app.use((err, req, res, next) => {
   const { statusCode = 500, message } = err;
